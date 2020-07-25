@@ -1,3 +1,0 @@
-g++ test.cpp ../module/line.cpp -o line.exe -L ../lib -ltgaimage -I ../third_party -I ../include
-
-g++ main.cpp model.cpp ../module/triangle.cpp ../module/math.cpp ../module/line.cpp -o line.exe -L ../lib -ltgaimage -I ../third_party -I ../include
