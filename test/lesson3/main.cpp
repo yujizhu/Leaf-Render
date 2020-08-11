@@ -76,22 +76,24 @@ int main(int argc, char** argv) {
     */
 
     Vec3f light_dir(0,0,-1);
+    vector<vector<int>> zBuffer(width, vector<int>(height, INT_MAX));
     for (int i=0; i<model->nfaces(); i++) { 
         std::vector<int> face = model->face(i); 
         Vec2i screen_coords[3]; 
         Vec3f world_coords[3]; 
+        Vec3f world_coords_t[3];
         for (int j=0; j<3; j++) { 
            Vec3f v = model->vert(face[j]); 
            screen_coords[j] = Vec2i((v.x+1.)*width/2., (v.y+1.)*height/2.); 
-           world_coords[j]  = v; 
+           world_coords[j]  = Vec3f(int((v.x+1.)*width/2. + .5), int((v.y+1.)*height/2. + .5), v.z); // 这里改了，之前写的有点问题，没有转成int型
+           world_coords_t[j]  = v;
         } 
-        Vec3f n = (world_coords[2]-world_coords[0])^(world_coords[1]-world_coords[0]); 
+        Vec3f n = (world_coords_t[2]-world_coords_t[0])^(world_coords_t[1]-world_coords_t[0]); 
         n.normalize(); 
         float intensity = n*light_dir;
-        vector<vector<int>> zBuffer(height, vector<int>(width, INT_MIN));
         if (intensity > 0) { // 如果点乘的结果为负，说明光线来自多边形的后方，因此需要去掉这个三角形。
             //triangle_bylesson(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(intensity*255, intensity*255, intensity*255, 255));  // 光线与平面越垂直，平面的光强度越大。因此用点乘计算这个垂直的程度。（在相同的光强度下，当多边形与光的方向正交时，其照度最高。）
-            triangle(vector<Ve3ci>{world_coods[0], world_coords[1], world_coords[2]}, image, TGAColor(intensity * 255, intensity * 255, intensity * 255, 255));
+            triangle(vector<Vec3f>{world_coords[0], world_coords[1], world_coords[2]}, zBuffer, image, TGAColor(intensity*255, intensity*255, intensity*255, 255));
         }
     }
     

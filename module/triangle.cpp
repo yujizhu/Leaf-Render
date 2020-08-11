@@ -1,6 +1,7 @@
 #include"../include/triangle.hpp"
 #include<iostream>
 #include"../include/math.hpp"
+#include<algorithm>
 
 namespace Render {
 
@@ -213,6 +214,46 @@ void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color) {
             if (barycentricPoint.x >= 0 && barycentricPoint.y >= 0 && barycentricPoint.z >= 0) {
                 image.set(x, y, color);
             }
+        }
+    }
+}
+
+// 这个算法实现会出现“空洞”现象，即三角形和三角形之间会有点没有被填充到，该如何解决?
+void triangle(const std::vector<Vec3f>& t, std::vector<std::vector<int>>& zBuffer, TGAImage &image, TGAColor color) {
+
+    float maxX = image.get_width() - 1;
+    float minX = 0;
+    float maxY = image.get_height() - 1;
+    float minY = 0;
+    
+
+    maxX = std::min(maxX, std::max(std::max(t[0].x, t[1].x), t[2].x));
+    minX = std::max(minX, std::min(std::min(t[0].x, t[1].x), t[2].x));
+    maxY = std::min(maxY, std::max(std::max(t[0].y, t[1].y), t[2].y));
+    minY = std::max(minY, std::min(std::min(t[0].y, t[1].y), t[2].y));
+
+    Vec3f p;
+    for (p.x = minX; p.x <= maxX; p.x++) {
+        for (p.y = minY; p.y <= maxY; p.y++) {
+            Vec3f barycentricPoint = barycentric(std::vector<Vec3f>{{t[0].x, t[0].y, t[0].z}, {t[1].x, t[1].y, t[1].z}, {t[2].x, t[2].y, t[2].z}}, p);
+            
+            if (barycentricPoint.x < 0 || barycentricPoint.y < 0 || barycentricPoint.z < 0) continue;
+            p.z = barycentricPoint.x * t[0].z + barycentricPoint.y * t[1].z + barycentricPoint.z * t[2].z;
+            if (zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] > p.z) { // 这里的写法和教程上的不同，教程上用的小于，这里用大于才不会有遮挡，猜测是因为坐标系是右手坐标系，且相机位于原点，相机朝向Z轴的正向。
+                zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] = p.z;
+                image.set(static_cast<int>(p.x), static_cast<int>(p.y), color);
+            }
+            
+            /*
+            if (barycentricPoint.x >= 0 && barycentricPoint.y >= 0 && barycentricPoint.z >= 0) {
+                p.z = barycentricPoint.x * t[0].z + barycentricPoint.y * t[1].z + barycentricPoint.z * t[2].z;
+                if (zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] > p.z) { // 这里的写法和教程上的不同，教程上用的小于，这里用大于才不会有遮挡，猜测是因为坐标系是右手坐标系，且相机位于原点，相机朝向Z轴的正向。
+                    zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] = p.z;
+                    image.set(static_cast<int>(p.x), static_cast<int>(p.y), color);
+                }
+            }
+            */
+            
         }
     }
 }
