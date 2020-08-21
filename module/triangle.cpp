@@ -219,7 +219,7 @@ void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color) {
 }
 
 // 这个算法实现会出现“空洞”现象，即三角形和三角形之间会有点没有被填充到，该如何解决?
-void triangle(const std::vector<Vec3f>& t, std::vector<std::vector<int>>& zBuffer, TGAImage &image, TGAColor color) {
+void triangle(const std::vector<Vec3f>& v, std::vector<std::vector<float>>& zBuffer, TGAImage &image, TGAColor color) {
 
     float maxX = image.get_width() - 1;
     float minX = 0;
@@ -227,20 +227,64 @@ void triangle(const std::vector<Vec3f>& t, std::vector<std::vector<int>>& zBuffe
     float minY = 0;
     
 
-    maxX = std::min(maxX, std::max(std::max(t[0].x, t[1].x), t[2].x));
-    minX = std::max(minX, std::min(std::min(t[0].x, t[1].x), t[2].x));
-    maxY = std::min(maxY, std::max(std::max(t[0].y, t[1].y), t[2].y));
-    minY = std::max(minY, std::min(std::min(t[0].y, t[1].y), t[2].y));
+    maxX = std::min(maxX, std::max(std::max(v[0].x, v[1].x), v[2].x));
+    minX = std::max(minX, std::min(std::min(v[0].x, v[1].x), v[2].x));
+    maxY = std::min(maxY, std::max(std::max(v[0].y, v[1].y), v[2].y));
+    minY = std::max(minY, std::min(std::min(v[0].y, v[1].y), v[2].y));
 
     Vec3f p;
     for (p.x = minX; p.x <= maxX; p.x++) {
         for (p.y = minY; p.y <= maxY; p.y++) {
-            Vec3f barycentricPoint = barycentric(std::vector<Vec3f>{{t[0].x, t[0].y, t[0].z}, {t[1].x, t[1].y, t[1].z}, {t[2].x, t[2].y, t[2].z}}, p);
-            
+            //Vec3f barycentricPoint = barycentric(std::vector<Vec3f>{{t[0].x, t[0].y, t[0].z}, {t[1].x, t[1].y, t[1].z}, {t[2].x, t[2].y, t[2].z}}, p);  // 用这种重心求法空洞较多，为什么？
+            Vec3f barycentricPoint = barycentric(Vec3f(v[0].x, v[0].y, v[0].z), Vec3f(v[1].x, v[1].y, v[1].z), Vec3f(v[2].x, v[2].y, v[2].z), p);
             if (barycentricPoint.x < 0 || barycentricPoint.y < 0 || barycentricPoint.z < 0) continue;
-            p.z = barycentricPoint.x * t[0].z + barycentricPoint.y * t[1].z + barycentricPoint.z * t[2].z;
-            if (zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] > p.z) { // 这里的写法和教程上的不同，教程上用的小于，这里用大于才不会有遮挡，猜测是因为坐标系是右手坐标系，且相机位于原点，相机朝向Z轴的正向。
+            p.z = barycentricPoint.x * v[0].z + barycentricPoint.y * v[1].z + barycentricPoint.z * v[2].z;
+            if (zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] < p.z) { // 坐标系为右手坐标系，相机位于z轴的正向，因此z越大，越靠近相机，就会将后面的物体遮挡住。之前zBuffer的类型写错了，存储为了int型的数据，因此会出现截断现象，导致错误，具体错误的现象为，需要将<（小于号）换成>（大于号），且将zBuffer的初值存储为INT_MAX，即能存储的最大值才能实现遮挡，为什么这么做也能实现遮挡？
                 zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] = p.z;
+                image.set(static_cast<int>(p.x), static_cast<int>(p.y), color);
+            }
+            
+            /*
+            if (barycentricPoint.x >= 0 && barycentricPoint.y >= 0 && barycentricPoint.z >= 0) {
+                p.z = barycentricPoint.x * t[0].z + barycentricPoint.y * t[1].z + barycentricPoint.z * t[2].z;
+                if (zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] > p.z) { // 这里的写法和教程上的不同，教程上用的小于，这里用大于才不会有遮挡，猜测是因为坐标系是右手坐标系，且相机位于原点，相机朝向Z轴的正向。
+                    zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] = p.z;
+                    image.set(static_cast<int>(p.x), static_cast<int>(p.y), color);
+                }
+            }
+            */
+            
+        }
+    }
+}
+
+void triangle(const std::vector<Vec3f>& v, const std::vector<Vec2f>& t, std::vector<std::vector<float>>& zBuffer, TGAImage &image, TGAImage& texture) {
+
+    float maxX = image.get_width() - 1;
+    float minX = 0;
+    float maxY = image.get_height() - 1;
+    float minY = 0;
+
+    int tW = texture.get_width();
+    int tH = texture.get_height();
+
+    maxX = std::min(maxX, std::max(std::max(v[0].x, v[1].x), v[2].x));
+    minX = std::max(minX, std::min(std::min(v[0].x, v[1].x), v[2].x));
+    maxY = std::min(maxY, std::max(std::max(v[0].y, v[1].y), v[2].y));
+    minY = std::max(minY, std::min(std::min(v[0].y, v[1].y), v[2].y));
+
+    Vec3f p;
+    for (p.x = minX; p.x <= maxX; p.x++) {
+        for (p.y = minY; p.y <= maxY; p.y++) {
+            //Vec3f barycentricPoint = barycentric(std::vector<Vec3f>{{t[0].x, t[0].y, t[0].z}, {t[1].x, t[1].y, t[1].z}, {t[2].x, t[2].y, t[2].z}}, p);  // 用这种重心求法空洞较多，为什么？
+            Vec3f barycentricPoint = barycentric(Vec3f(v[0].x, v[0].y, v[0].z), Vec3f(v[1].x, v[1].y, v[1].z), Vec3f(v[2].x, v[2].y, v[2].z), p);
+            if (barycentricPoint.x < 0 || barycentricPoint.y < 0 || barycentricPoint.z < 0) continue;
+            p.z = barycentricPoint.x * v[0].z + barycentricPoint.y * v[1].z + barycentricPoint.z * v[2].z;
+            if (zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] < p.z) { // 坐标系为右手坐标系，相机位于z轴的正向，因此z越大，越靠近相机，就会将后面的物体遮挡住。之前zBuffer的类型写错了，存储为了int型的数据，因此会出现截断现象，导致错误，具体错误的现象为，需要将<（小于号）换成>（大于号），且将zBuffer的初值存储为INT_MAX，即能存储的最大值才能实现遮挡，为什么这么做也能实现遮挡？
+                zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] = p.z;
+                double textX = (t[0].x * barycentricPoint.x + t[1].x * barycentricPoint.y + t[2].x * barycentricPoint.z) * tW;
+                double textY = (t[0].y * barycentricPoint.x + t[1].y * barycentricPoint.y + t[2].y * barycentricPoint.z) * tH;
+                TGAColor color = texture.get(static_cast<int>(textX), static_cast<int>(textY));
                 image.set(static_cast<int>(p.x), static_cast<int>(p.y), color);
             }
             
