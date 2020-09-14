@@ -235,8 +235,8 @@ void triangle(const std::vector<Vec3f>& v, std::vector<std::vector<float>>& zBuf
     Vec3f p;
     for (p.x = minX; p.x <= maxX; p.x++) {
         for (p.y = minY; p.y <= maxY; p.y++) {
-            //Vec3f barycentricPoint = barycentric(std::vector<Vec3f>{{t[0].x, t[0].y, t[0].z}, {t[1].x, t[1].y, t[1].z}, {t[2].x, t[2].y, t[2].z}}, p);  // 用这种重心求法空洞较多，为什么？
-            Vec3f barycentricPoint = barycentric(Vec3f(v[0].x, v[0].y, v[0].z), Vec3f(v[1].x, v[1].y, v[1].z), Vec3f(v[2].x, v[2].y, v[2].z), p);
+            Vec3f barycentricPoint = barycentric(std::vector<Vec3f>{{v[0].x, v[0].y, v[0].z}, {v[1].x, v[1].y, v[1].z}, {v[2].x, v[2].y, v[2].z}}, p);  // 用这种重心求法空洞较多，为什么？
+            //Vec3f barycentricPoint = barycentric(Vec3f(v[0].x, v[0].y, v[0].z), Vec3f(v[1].x, v[1].y, v[1].z), Vec3f(v[2].x, v[2].y, v[2].z), p);
             if (barycentricPoint.x < 0 || barycentricPoint.y < 0 || barycentricPoint.z < 0) continue;
             p.z = barycentricPoint.x * v[0].z + barycentricPoint.y * v[1].z + barycentricPoint.z * v[2].z;
             if (zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] < p.z) { // 坐标系为右手坐标系，相机位于z轴的正向，因此z越大，越靠近相机，就会将后面的物体遮挡住。之前zBuffer的类型写错了，存储为了int型的数据，因此会出现截断现象，导致错误，具体错误的现象为，需要将<（小于号）换成>（大于号），且将zBuffer的初值存储为INT_MAX，即能存储的最大值才能实现遮挡，为什么这么做也能实现遮挡？
@@ -276,8 +276,10 @@ void triangle(const std::vector<Vec3f>& v, const std::vector<Vec2f>& t, std::vec
     Vec3f p;
     for (p.x = minX; p.x <= maxX; p.x++) {
         for (p.y = minY; p.y <= maxY; p.y++) {
-            //Vec3f barycentricPoint = barycentric(std::vector<Vec3f>{{t[0].x, t[0].y, t[0].z}, {t[1].x, t[1].y, t[1].z}, {t[2].x, t[2].y, t[2].z}}, p);  // 用这种重心求法空洞较多，为什么？
-            Vec3f barycentricPoint = barycentric(Vec3f(v[0].x, v[0].y, v[0].z), Vec3f(v[1].x, v[1].y, v[1].z), Vec3f(v[2].x, v[2].y, v[2].z), p);
+            Vec3f barycentricPoint = barycentric(std::vector<Vec3f>{Vec3f(v[0].x, v[0].y, v[0].z), Vec3f(v[1].x, v[1].y, v[1].z), Vec3f(v[2].x, v[2].y, v[2].z)}, p);;  // 用这种重心求法空洞较多，为什么？
+            //Vec3f barycentricPoint = barycentric(Vec3f(v[0].x, v[0].y, v[0].z), Vec3f(v[1].x, v[1].y, v[1].z), Vec3f(v[2].x, v[2].y, v[2].z), p);
+            //std::cout << "barycentricPoint " << barycentricPoint << std::endl;
+            //std::cout << "barycentricPoint_t " << barycentricPoint_t << std::endl;
             if (barycentricPoint.x < 0 || barycentricPoint.y < 0 || barycentricPoint.z < 0) continue;
             p.z = barycentricPoint.x * v[0].z + barycentricPoint.y * v[1].z + barycentricPoint.z * v[2].z;
             if (zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] < p.z) { // 坐标系为右手坐标系，相机位于z轴的正向，因此z越大，越靠近相机，就会将后面的物体遮挡住。之前zBuffer的类型写错了，存储为了int型的数据，因此会出现截断现象，导致错误，具体错误的现象为，需要将<（小于号）换成>（大于号），且将zBuffer的初值存储为INT_MAX，即能存储的最大值才能实现遮挡，为什么这么做也能实现遮挡？

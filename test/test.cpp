@@ -9,7 +9,7 @@ const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red   = TGAColor(255, 0,   0,   255);
 
 int main() {
-    TGAImage image(800, 800, TGAImage::RGB);
+    TGAImage image(1600, 800, TGAImage::RGB);
     // Render::line(13, 20, 80, 40, image, white, Render::LineMethod::BRESENHAM);
     //line(370, 312, 349, 353, image, white, Render::LineMethod::BRESENHAM);
     //cout << "aa" << endl;

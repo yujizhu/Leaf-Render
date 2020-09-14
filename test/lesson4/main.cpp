@@ -66,22 +66,17 @@ int main(int argc, char** argv) {
     const int height = 800;
     TGAImage image(width, height, TGAImage::RGB);
     TGAImage texture;
-    Camera cam(Vec3f(0, 0, 0), Vec3f(1, 1, 3), Vec3f(0, 1, 0), 800, 800);
+    Camera cam(Vec3f(0, 0, 0), Vec3f(0, 0, 5), Vec3f(0, 0, 1), 800, 800);
     Matrixf projection = cam.getPerspectiveMatrix();
     Matrixf viewPort = cam.getViewport(width / 8, height / 8, width * 3 / 4, height * 3 / 4, 255);
-    Matrixf modelView = cam.getRotateTransform();
-    std::cout << "ModelView:" << std::endl;
-    std::cerr << modelView << std::endl;
-    std::cout << "Projection:" << std::endl;
-    std::cerr << projection << std::endl;
-    std::cout << "Viewport:" << std::endl;
-    std::cerr << viewPort << std::endl;
     bool oState = texture.read_tga_file("african_head_diffuse.tga");
     if (!oState) {
         cout << "fail!" << endl;
     }
-
-    
+    Matrixf mat1{{1, 2, 3}, {4, 5, 6}};
+    Matrixf mat2{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+    std::cout << mat1 * mat2 << std::endl;
+    vector<vector<int>> mmmm = {{1, 2, 3}, {4, 5, 6}};
     /*
     for (int i=0; i<model->nfaces(); i++) {
         std::vector<int> face = model->face(i);
@@ -93,8 +88,8 @@ int main(int argc, char** argv) {
         triangle_bymyself(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(rand() % 255, rand() % 255, rand() % 255, 255));
     }
     */
-    
-    Vec3f light_dir(0, 0, -1);
+
+    Vec3f light_dir(0,0,-1);
     vector<vector<float>> zBuffer(width, vector<float>(height, -std::numeric_limits<float>::max()));  // 这里之前存的int型，应该是错了。  有一个问题这里为什么用-std::numeric_limits<float>::max()而不用std::numeric_limits<float>::min()?因为std::numeric_limits<float>::max() = 3.40282e+38 而std::numeric_limits<float>::min() = 1.17549e-38，并不是我一开始以为的float能存的最小的数，反而是一个正数，这是因为它存储的就是float能表示的最小的正数（应该和float的二进制表示有关），因此如果想要保存float所能表示的最小的数（最小的负数），应该使用-std::numeric_limits<float>::max()，此外C++11中添加了lowest()函数，其值与-std::numeric_limits<float>::max()相同。
     //std::cout << -std::numeric_limits<float>::max() << "      " << std::numeric_limits<float>::lowest() << std::endl;
     texture.flip_vertically();   // 这里需要先对原图片进行翻转，因为图片以左下角为原点，而代码内部处理矩阵时以左上角作为原点。
@@ -109,7 +104,7 @@ int main(int argc, char** argv) {
             Vec2f t = model->text(face[j][1]);
             //screen_coords[j] = Vec2i((v.x + 1.) * width / 2., (v.y + 1.) * height / 2.);
             //Matrixf aaa = viewPort *projection *homoCoordinateTransformation(v);
-            screen_coords[j] = invHomoCoordinateTransformation(viewPort * projection * modelView * homoCoordinateTransformation(v));
+            screen_coords[j] = invHomoCoordinateTransformation(viewPort * projection * homoCoordinateTransformation(v));
             world_coords[j] = Vec3f(int((v.x + 1.) * width / 2. + .5), int((v.y + 1.) * height / 2. + .5), v.z); // 这里改了，之前写的有点问题，没有转成int型
             //std::cout << world_coords[j] << std::endl;
             world_coords_t[j] = v;
@@ -120,9 +115,9 @@ int main(int argc, char** argv) {
         float intensity = n*light_dir;
         if (intensity > 0) { // 如果点乘的结果为负，说明光线来自多边形的后方，因此需要去掉这个三角形。
             //triangle_bylesson(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(intensity*255, intensity*255, intensity*255, 255));  // 光线与平面越垂直，平面的光强度越大。因此用点乘计算这个垂直的程度。（在相同的光强度下，当多边形与光的方向正交时，其照度最高。）
-            triangle(vector<Vec3f>{screen_coords[0], screen_coords[1], screen_coords[2]}, zBuffer, image, TGAColor(intensity*255, intensity*255, intensity*255, 255));
+            //triangle(vector<Vec3f>{world_coords[0], world_coords[1], world_coords[2]}, zBuffer, image, TGAColor(intensity*255, intensity*255, intensity*255, 255));
             //triangle(vector<Vec3f>{world_coords[0], world_coords[1], world_coords[2]}, vector<Vec2f>{text_coords[0], text_coords[1], text_coords[2]}, zBuffer, image, texture);
-            //triangle(vector<Vec3f>{screen_coords[0], screen_coords[1], screen_coords[2]}, vector<Vec2f>{text_coords[0], text_coords[1], text_coords[2]}, zBuffer, image, texture);
+            triangle(vector<Vec3f>{screen_coords[0], screen_coords[1], screen_coords[2]}, vector<Vec2f>{text_coords[0], text_coords[1], text_coords[2]}, zBuffer, image, texture);
         }
     }
 
@@ -144,20 +139,8 @@ int main(int argc, char** argv) {
     
     image.flip_vertically(); 
     image.write_tga_file("output.tga");
-    
-    cout << "end" << endl;
-
-    TGAImage zbimage(width, height, TGAImage::GRAYSCALE);
-    for (int i=0; i<width; i++) {
-        for (int j=0; j<height; j++) {
-            zbimage.set(i, j, TGAColor((unsigned char)(zBuffer[i][j])));
-        }
-    }
-    zbimage.flip_vertically(); // i want to have the origin at the left bottom corner of the image
-    zbimage.write_tga_file("zbuffer.tga");
-
     delete model;
-
+    cout << "end" << endl;
     int aa;
     cin >> aa;
 
