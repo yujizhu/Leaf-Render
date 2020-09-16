@@ -5,6 +5,14 @@
 #include <math.h>
 #include "tgaimage.h"
 
+TGAColor operator*(float left, TGAColor right) {
+	return TGAColor(left * right.r, left * right.g, left * right.b, left * right.a);
+}
+
+TGAColor operator*(TGAColor left, float right) {
+	return TGAColor(right * left.r, right * left.g, right * left.b, right * left.a);
+}
+
 TGAImage::TGAImage() : data(NULL), width(0), height(0), bytespp(0) {
 }
 

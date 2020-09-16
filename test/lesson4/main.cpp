@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
             world_coords_t[j] = v;
             text_coords[j] = t;
         }
-        Vec3f n = (world_coords_t[2]-world_coords_t[0])^(world_coords_t[1]-world_coords_t[0]); 
+        Vec3f n = invHomoCoordinateTransformation(viewPort * projection * homoCoordinateTransformation(v)); 
         n.normalize(); 
         float intensity = n*light_dir;
         if (intensity > 0) { // 如果点乘的结果为负，说明光线来自多边形的后方，因此需要去掉这个三角形。

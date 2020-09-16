@@ -62,8 +62,22 @@ struct TGAColor {
 		}
 		return *this;
 	}
+
+	TGAColor operator+(const TGAColor& c) {
+		return TGAColor(r + c.r, g + c.g, b + c.b, a + c.a);
+	}
+
+	TGAColor operator-(const TGAColor& c) {
+		return TGAColor(r - c.r, g - c.g, b - c.b, a - c.a);
+	}
+
+	friend TGAColor operator*(float left, TGAColor right);
+	friend TGAColor operator*(TGAColor left, float right);
+	
 };
 
+TGAColor operator*(float left, TGAColor right);
+TGAColor operator*(TGAColor left, float right);
 
 class TGAImage {
 protected:

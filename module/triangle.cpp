@@ -218,8 +218,7 @@ void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color) {
     }
 }
 
-// 这个算法实现会出现“空洞”现象，即三角形和三角形之间会有点没有被填充到，该如何解决?
-void triangle(const std::vector<Vec3f>& v, std::vector<std::vector<float>>& zBuffer, TGAImage &image, TGAColor color) {
+void triangle(const std::vector<Vec3f>& v, std::vector<std::vector<int>>& zBuffer, TGAImage &image, TGAColor color) {
 
     float maxX = image.get_width() - 1;
     float minX = 0;
@@ -258,7 +257,7 @@ void triangle(const std::vector<Vec3f>& v, std::vector<std::vector<float>>& zBuf
     }
 }
 
-void triangle(const std::vector<Vec3f>& v, const std::vector<Vec2f>& t, std::vector<std::vector<float>>& zBuffer, TGAImage &image, TGAImage& texture) {
+void triangle(const std::vector<Vec3f>& v, const std::vector<Vec2f>& t, std::vector<std::vector<int>>& zBuffer, TGAImage& image, TGAImage& texture) {
 
     float maxX = image.get_width() - 1;
     float minX = 0;
@@ -290,16 +289,44 @@ void triangle(const std::vector<Vec3f>& v, const std::vector<Vec2f>& t, std::vec
                 image.set(static_cast<int>(p.x), static_cast<int>(p.y), color);
             }
             
-            /*
-            if (barycentricPoint.x >= 0 && barycentricPoint.y >= 0 && barycentricPoint.z >= 0) {
-                p.z = barycentricPoint.x * t[0].z + barycentricPoint.y * t[1].z + barycentricPoint.z * t[2].z;
-                if (zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] > p.z) { // 这里的写法和教程上的不同，教程上用的小于，这里用大于才不会有遮挡，猜测是因为坐标系是右手坐标系，且相机位于原点，相机朝向Z轴的正向。
-                    zBuffer[static_cast<int>(p.x)][static_cast<int>(p.y)] = p.z;
-                    image.set(static_cast<int>(p.x), static_cast<int>(p.y), color);
-                }
-            }
-            */
             
+        }
+    }
+}
+
+
+void triangle_standard(Vec3i t0, Vec3i t1, Vec3i t2, Vec2f ity0, Vec2f ity1, Vec2f ity2, std::vector<std::vector<int>>& zBuffer, TGAImage& image, TGAImage& texture) {
+    if (t0.y==t1.y && t0.y==t2.y) return; // i dont care about degenerate triangles
+    if (t0.y>t1.y) { std::swap(t0, t1); std::swap(ity0, ity1); }
+    if (t0.y>t2.y) { std::swap(t0, t2); std::swap(ity0, ity2); }
+    if (t1.y>t2.y) { std::swap(t1, t2); std::swap(ity1, ity2); }
+    int width = image.get_width();
+    int height = image.get_height();
+    int tW = texture.get_width();
+    int tH = texture.get_height();
+
+    int total_height = t2.y-t0.y;
+    for (int i=0; i<total_height; i++) {
+        bool second_half = i>t1.y-t0.y || t1.y==t0.y;
+        int segment_height = second_half ? t2.y-t1.y : t1.y-t0.y;
+        float alpha = (float)i/total_height;
+        float beta  = (float)(i-(second_half ? t1.y-t0.y : 0))/segment_height; // be careful: with above conditions no division by zero here
+        Vec3i A    =               t0  + Vec3f(t2-t0  )*alpha;
+        Vec3i B    = second_half ? t1  + Vec3f(t2-t1  )*beta : t0  + Vec3f(t1-t0  )*beta;
+        Vec2f ityA =               ity0 +   (ity2-ity0)*alpha;
+        Vec2f ityB = second_half ? ity1 +   (ity2-ity1)*beta : ity0 +   (ity1-ity0)*beta;
+        if (A.x>B.x) { std::swap(A, B); std::swap(ityA, ityB); }
+        for (int j=A.x; j<=B.x; j++) {
+            float phi = B.x==A.x ? 1. : (float)(j-A.x)/(B.x-A.x);
+            Vec3i    P = Vec3f(A) +  Vec3f(B-A)*phi;
+            Vec2f ityP =    ityA  + (ityB-ityA)*phi;
+            //int idx = P.x+P.y*width;
+            if (P.x>=width||P.y>=height||P.x<0||P.y<0) continue;
+            if (zBuffer[P.x][P.y]<P.z) {
+                TGAColor color = texture.get(static_cast<int>(ityP.x * tW), static_cast<int>(ityP.y * tH));
+                zBuffer[P.x][P.y] = P.z;
+                image.set(P.x, P.y, color);
+            }
         }
     }
 }
